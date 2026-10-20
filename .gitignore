@@ -10,3 +10,8 @@ data/*
 *.pth
 *.pt
 # CSV/JSON/PNG nhỏ có thể commit sau khi review; không ignore toàn bộ outputs.
+
+# Bỏ qua data/cache ở mọi cấp, kể cả notebook làm việc tại notebooks/.
+**/data/**
+!data/README.md
+.pytest_cache/

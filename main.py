@@ -72,18 +72,42 @@ def check_foundation():
     print(f"Còn {len(todos)} vị trí NotImplementedError thuộc phần thuật toán của thành viên.")
     for item in todos:
         print(f"  TODO {item}")
-    print("CHƯA xác nhận tải data, train, metrics hoặc reload; check chỉ kiểm cấu trúc/giao diện.")
+    print("Check chỉ kiểm cấu trúc/giao diện; data, train, metrics và reload cần kiểm riêng.")
 
 
 def main():
     parser = argparse.ArgumentParser(description="FashionMNIST Lab 1 — bộ khung nhóm")
-    parser.add_argument("--mode", choices=["check", "prepare", "train", "select", "evaluate"], required=True)
+    parser.add_argument("--mode", choices=["check", "prepare", "train", "select", "evaluate", "doctor", "smoke", "plot"], required=True)
     parser.add_argument("--config", default="configs/A.json")
     parser.add_argument("--checkpoint")
+    parser.add_argument("--report", help="JSON diagnostic output; optional")
+    parser.add_argument("--device", choices=["auto", "cpu", "cuda"], default="auto")
+    parser.add_argument("--history", help="History CSV for plot mode")
+    parser.add_argument("--output", help="PNG output for plot mode")
     parser.add_argument("--runs", nargs="+", default=["A", "B", "C", "D"])
     args = parser.parse_args()
     if args.mode == "check":
         check_foundation()
+        return
+    if args.mode == "doctor":
+        import json
+        from src.utils import diagnose_environment
+        report = diagnose_environment()
+        if args.report:
+            save_json(project_path(args.report), report)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        if not report["ready"]:
+            raise SystemExit(1)
+        return
+    if args.mode == "plot":
+        if not args.history:
+            parser.error("plot cần --history")
+        history = project_path(args.history)
+        if not history.is_file():
+            raise FileNotFoundError(history)
+        output = project_path(args.output) if args.output else history.parent / "loss_curves.png"
+        from src.visualize import plot_history
+        print(plot_history(history, output))
         return
     from src.utils import set_seed, resolve_device, collect_environment
     if args.mode == "evaluate":
@@ -93,11 +117,14 @@ def main():
         if not checkpoint.is_file():
             raise FileNotFoundError(f"Chưa có checkpoint: {checkpoint}")
         from src.evaluate import evaluate_final
-        print(evaluate_final(str(checkpoint), resolve_device("auto")))
+        print(evaluate_final(str(checkpoint), resolve_device(args.device)))
         return
     config = validate_config(load_json(project_path(args.config)))
+    if args.mode == "smoke":
+        from src.integration import smoke_integration
+        print(smoke_integration(config, args.device, args.report))
+        return
     if args.mode == "select":
-        from shutil import copy2
         from src.experiments import summarize_and_select
         output_root = project_path(config["output_root"])
         final_path = output_root / "final" / "best_model.pth"
@@ -115,8 +142,30 @@ def main():
         source = project_path(result["checkpoint_path"])
         if not source.is_file():
             raise FileNotFoundError(f"Không có checkpoint được chọn: {source}")
+        allowed = {(run_dir / "best_model.pth").resolve() for run_dir in run_dirs}
+        if source.resolve() not in allowed:
+            raise ValueError("Checkpoint nguồn không thuộc những run được chọn để so sánh")
         final_path.parent.mkdir(parents=True, exist_ok=True)
-        copy2(source, final_path)
+        # Exclusive create: không ghi đè ngay cả khi có tiến trình khác chọn cùng lúc.
+        from shutil import copyfileobj
+        from hashlib import sha256
+        created = False
+        try:
+            with source.open("rb") as incoming:
+                with final_path.open("xb") as outgoing:
+                    created = True
+                    copyfileobj(incoming, outgoing)
+        except BaseException:
+            if created:
+                final_path.unlink(missing_ok=True)
+            raise
+        digest = sha256()
+        with final_path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        save_json(final_path.parent / "selection_provenance.json", {
+            "source_checkpoint": str(source), "final_checkpoint": str(final_path),
+            "sha256": digest.hexdigest(), "candidate_runs": args.runs})
         print(result)
         print(f"Checkpoint cuối: {final_path}")
         return
@@ -130,6 +179,8 @@ def main():
     run_dir = project_path(config["output_root"]) / "runs" / config["run_id"]
     if run_dir.exists():
         raise FileExistsError(f"Run đã tồn tại: {run_dir}. Đổi run_id trước khi chạy lại.")
+    from src.utils import validate_split
+    validate_split(load_json(split_path), config)
     set_seed(config["seed"])
     device = resolve_device(config["device"])
     from src.data import build_dataloaders
@@ -144,9 +195,35 @@ def main():
     metadata = collect_environment()
     metadata.update({"run_id": config["run_id"], "seed": config["seed"], "device": str(device)})
     save_json(run_dir / "metadata.json", metadata)
-    result = fit(model, train_loader, val_loader, config, run_dir)
-    from src.visualize import plot_history
-    plot_history(result["history_path"], run_dir / "loss_curves.png")
+    from datetime import datetime, timezone
+    from time import perf_counter
+    def record(**updates):
+        current = load_json(run_dir / "metadata.json")
+        current.update(updates)
+        save_json(run_dir / "metadata.json", current)
+    started = perf_counter()
+    record(status="running", started_at=datetime.now(timezone.utc).isoformat())
+    try:
+        result = fit(model, train_loader, val_loader, config, run_dir)
+        if not isinstance(result, dict) or {"history_path", "best_checkpoint_path", "best_epoch"} - result.keys():
+            raise ValueError("fit trả sai hợp đồng")
+        for key in ("history_path", "best_checkpoint_path"):
+            if not project_path(result[key]).is_file():
+                raise FileNotFoundError(f"fit chưa tạo {key}: {result[key]}")
+    except BaseException as exc:
+        record(status="failed", error=f"{type(exc).__name__}: {exc}",
+               duration_seconds=perf_counter()-started, finished_at=datetime.now(timezone.utc).isoformat())
+        raise
+    record(status="trained", best_epoch=result["best_epoch"],
+           duration_seconds=perf_counter()-started, finished_at=datetime.now(timezone.utc).isoformat())
+    try:
+        from src.visualize import plot_history
+        plot_history(result["history_path"], run_dir / "loss_curves.png")
+    except BaseException as exc:
+        record(plot_status="failed", plot_error=f"{type(exc).__name__}: {exc}")
+        print("Train đã xong. Sau khi TV4 hoàn thiện, chạy mode plot để tạo hình, không train lại.")
+        raise
+    record(status="completed", plot_status="completed")
     print(result)
 
 

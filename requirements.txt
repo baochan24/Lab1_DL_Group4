@@ -4,3 +4,6 @@ torch
 torchvision
 numpy
 matplotlib
+
+# src/data.py đã bàn giao sử dụng pandas để xuất bảng phân bố lớp.
+pandas

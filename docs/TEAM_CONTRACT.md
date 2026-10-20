@@ -29,7 +29,7 @@ FashionMNIST: 60.000 train gốc, 10.000 test; chia train gốc thành 54.000/6.
 
 ## Phân định trách nhiệm
 
-Main đặt seed, resolve device, tạo model mới và run_dir, ghi config/metadata. TV3 fit tạo loss và optimizer một lần, gọi evaluate của TV4, ghi history và checkpoint. TV3 cập nhật metadata thêm thời gian bắt đầu/kết thúc/duration, trạng thái completed/failed. Không có optimizer thứ hai trong main. TV5 dùng lại pipeline, không viết train mới.
+Main đặt seed, resolve device, tạo model mới và run_dir, ghi config/metadata. TV3 fit tạo loss và optimizer một lần, gọi evaluate của TV4, ghi history và checkpoint. Main của TV6 ghi thời gian/trạng thái vòng đời run và thời gian gọi fit; TV3 có thể bổ sung chi tiết epoch vào metadata nhưng không thay khóa của main. Không có optimizer thứ hai trong main. TV5 dùng lại pipeline, không viết train mới.
 
 Model và tensor phải cùng device. model.train trước mỗi epoch; evaluate gọi eval/no_grad. Không import ngược train từ evaluate. Không train/tải khi import. Các hàm dùng ROOT/project_path từ utils; checkpoint data_root là đường dẫn tương đối project để mang sang máy khác.
 
@@ -94,3 +94,16 @@ Chạy check nền trước khi PR. Ghép sớm một batch sau khi TV1–4 tri�
 - Output root cho test cuối là thư mục cha của checkpoint cuối được truyền vào; các file test không hard-code sang một project/máy khác.
 - TV4 evaluate_final gọi plot_predictions; không cần TV6 viết thêm một lệnh vẽ ảnh riêng. TV4 vẫn chịu trách nhiệm mọi ảnh và CSV test.
 - summarize_and_select trả đường dẫn checkpoint nguồn có thật, không phải đường dẫn đích final chưa tạo; main sao chép sang final/best_model.pth.
+
+
+## TV6 bổ sung trước tích hợp — 20/10/2026
+
+Giữ nguyên mọi chữ ký TV1–TV5. Không phải thành viên khác đổi thuật toán để dùng phần bổ sung.
+
+- Main kiểm split đúng số mẫu, seed, miền chỉ số, không lặp/giao và phủ đủ trước train. Nếu TV1 bàn giao split không đạt thì báo lỗi, không tự sửa split.
+- `save_json` ghi atomically và từ chối NaN/Inf, tránh làm hỏng JSON cũ khi lỗi.
+- Checkpoint phải chứa preprocessing.data_root, 10 tên lớp khác nhau, epoch nguyên dương và val_metrics hữu hạn/accuracy 0–1. TV3 vốn đã được yêu cầu các khóa này.
+- Main ghi `running` trước fit, `failed` nếu fit lỗi, `trained` khi fit xong và `completed` sau vẽ. Nếu vẽ lỗi: status vẫn `trained`, plot_status=`failed`; dùng mode plot để phục hồi hình. duration_seconds của main là thời gian gọi fit, không so trực tiếp giữa phần cứng khác nhau.
+- Select chỉ chấp nhận checkpoint nguồn là best_model.pth thuộc các run được so sánh, chép không ghi đè và ghi selection_provenance.json có SHA256. TV5 vẫn chịu trách nhiệm so sánh/chọn trên validation.
+- src/integration.py thuộc TV6; chế độ smoke là kiểm tra ghép một batch, không thay training loop TV3 hoặc số liệu test TV4.
+- Doctor/report chỉ là kiểm môi trường, không là bằng chứng hoàn thành lab.
