@@ -1,0 +1,11 @@
+class_id,class_name,train_count,val_count,test_count
+0,T-shirt/top,5342,658,1000
+1,Trouser,5389,611,1000
+2,Pullover,5388,612,1000
+3,Dress,5438,562,1000
+4,Coat,5393,607,1000
+5,Sandal,5387,613,1000
+6,Shirt,5400,600,1000
+7,Sneaker,5463,537,1000
+8,Bag,5402,598,1000
+9,Ankle boot,5398,602,1000
