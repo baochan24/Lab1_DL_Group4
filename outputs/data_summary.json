@@ -1,0 +1,24 @@
+{
+    "train_samples": 54000,
+    "val_samples": 6000,
+    "test_samples": 10000,
+    "image_shape": [
+        1,
+        28,
+        28
+    ],
+    "batch_image_shape": [
+        64,
+        1,
+        28,
+        28
+    ],
+    "batch_label_shape": [
+        64
+    ],
+    "pixel_min": 0.0,
+    "pixel_max": 1.0,
+    "image_dtype": "torch.float32",
+    "label_dtype": "torch.int64",
+    "split_is_disjoint": true
+}
