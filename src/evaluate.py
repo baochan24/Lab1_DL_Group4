@@ -21,3 +21,53 @@ def evaluate_final(checkpoint_path, device):
     Return dict đường dẫn output. Không tune dựa trên test.
     """
     raise NotImplementedError("TV4: triển khai evaluate_final sau khi chốt mô hình")
+    """Đánh giá mô hình MLP trên tập test."""
+
+import torch
+from sklearn.metrics import accuracy_score, classification_report
+
+
+def evaluate_model(model, dataloader, device):
+    model.eval()
+
+    all_predictions = []
+    all_labels = []
+    total_loss = 0.0
+    criterion = torch.nn.CrossEntropyLoss()
+
+    with torch.no_grad():
+        for images, labels in dataloader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+            loss = criterion(outputs, labels)
+
+            total_loss += loss.item() * labels.size(0)
+
+            predictions = outputs.argmax(dim=1)
+
+            all_predictions.extend(predictions.cpu().tolist())
+            all_labels.extend(labels.cpu().tolist())
+
+    if not all_labels:
+        raise ValueError("Tập dữ liệu đánh giá đang trống.")
+
+    accuracy = accuracy_score(all_labels, all_predictions)
+    average_loss = total_loss / len(all_labels)
+
+    print(f"Test Loss: {average_loss:.4f}")
+    print(f"Test Accuracy: {accuracy:.4f}")
+
+    print(
+        classification_report(
+            all_labels,
+            all_predictions,
+            zero_division=0
+        )
+    )
+
+    return {
+        "test_loss": average_loss,
+        "test_accuracy": accuracy,
+    }
