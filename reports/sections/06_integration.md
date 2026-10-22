@@ -84,7 +84,7 @@ Checkpoint riêng của các run vẫn bị bỏ qua theo quy tắc *.pth/*.pt.
 
 Sau khi clone, có thể lấy checkpoint cuối trực tiếp từ repository
 và đối chiếu SHA-256 với selection_provenance.json.
-Kiểm chứng từ checkout sạch được thực hiện ở bước bàn giao.
+Kết quả kiểm chứng từ checkout sạch được trình bày bên dưới.
 
 ## Kiểm chứng từ checkout sạch
 

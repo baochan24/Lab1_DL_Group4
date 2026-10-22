@@ -80,10 +80,6 @@ phần trăm so với baseline A. Test accuracy cuối đạt 88,11%.
 
 Chưa đánh giá độ biến thiên qua nhiều seed hoặc so sánh với CNN.
 Chưa có phân tích định lượng lỗi theo từng lớp.
-
-Bước bàn giao còn cần kênh lưu checkpoint bền vững
-và kiểm chứng từ checkout sạch.
-
 Checkpoint cuối được đóng gói trong repository. Checkout sạch tại
 commit 01f734b đã qua kiểm tra cấu trúc, 13 unittest, đối chiếu
 SHA-256, metadata và forward. Việc cài đặt trong môi trường Python
