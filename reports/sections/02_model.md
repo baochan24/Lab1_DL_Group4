@@ -1,6 +1,5 @@
 # Model — TV2
 
-TODO: viết mục tiêu, cách làm, output thực tế, cách kiểm tra và nhận xét. Không điền kết quả dự kiến thành kết quả đã chạy.
 
 ## 1. Mục tiêu
 
@@ -77,4 +76,11 @@ Kết quả mong đợi: shape đầu ra `(64, 10)`, số tham số `101770`, lo
 
 ## 6. Nhận xét
 
-MLP là mô hình cơ sở đơn giản và dễ thử nghiệm. Tuy nhiên, Flatten không giữ tường minh cấu trúc không gian hai chiều của ảnh như CNN. Đánh giá chất lượng phân loại sẽ được bổ sung sau khi pipeline huấn luyện chạy hoàn chỉnh.
+MLP là mô hình cơ sở đơn giản, cho phép khảo sát learning rate và
+số neuron tầng ẩn. Flatten không khai thác tường minh quan hệ không
+gian hai chiều của ảnh như các tầng tích chập.
+
+Trong bốn cấu hình đã chạy, D với 256 neuron tầng ẩn được chọn
+tại epoch 9 bằng validation. Mô hình đạt test accuracy 88,11%
+trên 10.000 ảnh. Chi tiết so sánh nằm ở phần TV5; đánh giá cuối
+nằm ở phần TV4.

@@ -1,44 +1,64 @@
-# 05. Thử nghiệm và Lựa chọn Mô hình (TV5)
+# 05. Thử nghiệm và lựa chọn mô hình — TV5
 
-## 1. Thiết kế Thử nghiệm
-Để khảo sát ảnh hưởng của các siêu tham số đến hiệu năng mạng MLP trên bộ dữ liệu FashionMNIST, nhóm tiến hành 4 đợt chạy thử nghiệm (A, B, C, D):
+## 1. Thiết kế thí nghiệm
 
-- **Run A (Baseline):** 128 hidden units, learning rate = 0.001.
-- **Run B (LR nhỏ):** 128 hidden units, learning rate = 0.0001 (đánh giá tốc độ hội tụ khi giảm LR).
-- **Run C (LR lớn):** 128 hidden units, learning rate = 0.01 (đánh giá sự ổn định khi tăng LR).
-- **Run D (Mạng rộng hơn):** 256 hidden units, learning rate = 0.001 (đánh giá khả năng biểu diễn khi tăng dung lượng mô hình).
+Nhóm khảo sát learning rate và số neuron tầng ẩn của MLP trên FashionMNIST:
 
-Tất cả các thử nghiệm đều tuân thủ các quy tắc kiểm soát biến số:
-- Sử dụng chung một bộ chỉ số phân chia dữ liệu (`outputs/split_indices.json`).
-- Đặt lại seed khởi tạo ngẫu nhiên cố định (`seed = 42`).
-- Cùng huấn luyện trong 10 epochs với `batch_size = 64`.
+| Run | Hidden units | Learning rate |
+|---|---:|---:|
+| A — baseline | 128 | 0.001 |
+| B | 128 | 0.0001 |
+| C | 128 | 0.01 |
+| D | 256 | 0.001 |
 
-## 2. Kết quả So sánh
+Các run dùng chung split 54.000 train / 6.000 validation, seed 42,
+ToTensor, batch size 64, Adam và 10 epoch. Seed được đặt lại trước
+khi khởi tạo model mới cho mỗi run. Tập test không tham gia chọn mô hình.
 
-Sau khi hoàn tất quá trình huấn luyện, kết quả được tổng hợp tự động vào `outputs/experiment_results.csv`:
+## 2. Kết quả thực nghiệm
 
-| Run ID | Hidden Units | Learning Rate | Best Epoch | Best Val Accuracy | Best Val Loss |
-|---|---:|---:|---:|---:|---:|
-| **A** | 128 | 0.001 | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* |
-| **B** | 128 | 0.0001 | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* |
-| **C** | 128 | 0.01 | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* |
-| **D** | 256 | 0.001 | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* | *[Ghi nhận khi train]* |
+Nguồn: `outputs/experiment_results.csv`.
+Accuracy trong bảng được chuyển từ thang 0–1 sang phần trăm.
 
-## 3. Phân tích và Đánh giá
+| Run | Best epoch | Validation accuracy (%) | Validation loss |
+|---|---:|---:|---:|
+| A | 10 | 88.4500 | 0.319781 |
+| B | 10 | 85.9667 | 0.402145 |
+| C | 5 | 87.1667 | 0.368893 |
+| D | 9 | 88.8333 | 0.300137 |
 
-- **Tác động của Learning Rate (A vs B vs C):**
-  - Learning rate quá nhỏ (Run B) giúp quá trình tối ưu ổn định nhưng tốc độ hội tụ chậm, có thể cần thêm epoch để đạt hiệu năng tối ưu.
-  - Learning rate quá lớn (Run C) làm bước cập nhật trọng số lớn, dễ gây dao động loss hoặc nhảy qua điểm tối ưu cục bộ.
-- **Tác động của Kích thước Tầng ẩn (A vs D):**
-  - Tăng số neuron từ 128 lên 256 (Run D) mở rộng dung lượng biểu diễn của mạng MLP, giúp học các đặc trưng phức tạp hơn nhưng làm tăng chi phí tính toán và số lượng tham số.
+Số liệu được làm tròn khi trình bày; lựa chọn checkpoint sử dụng
+giá trị đầy đủ trong output, không dùng số đã làm tròn.
 
-## 4. Quyết định Chọn Mô hình
+## 3. Nhận xét
 
-Quy trình tự động lựa chọn checkpoint tốt nhất được thực hiện qua hàm `summarize_and_select` theo các nguyên tắc nghiêm ngặt:
-1. **Tuyệt đối không dùng tập Test** để tham gia vào quá trình so sánh và lựa chọn cấu hình.
-2. Ưu tiên chọn run có `val_accuracy` tốt nhất ở epoch tối ưu.
-3. Nếu `val_accuracy` bằng nhau, chọn run có `val_loss` thấp hơn. Nếu tiếp tục hòa, chọn run xuất hiện trước trong danh sách truyền vào.
+- Trong ngân sách 10 epoch, B có validation accuracy thấp nhất.
+  Kết quả này chưa chứng minh B sẽ kém hơn nếu huấn luyện lâu hơn.
+- C đạt best epoch ở epoch 5, nhưng validation accuracy thấp hơn A.
+  Cần xem toàn bộ history/loss curves trước khi kết luận về dao động
+  hoặc overfitting.
+- D đạt validation accuracy cao nhất và validation loss thấp nhất.
+  So với A, accuracy tăng khoảng 0.3833 điểm phần trăm.
+- D có nhiều tham số hơn A. Kết quả hiện tại chỉ dựa trên một seed,
+  chưa đủ để kết luận mức cải thiện ổn định qua nhiều lần chạy.
 
-Kết quả được tự động ghi nhận vào file `outputs/final/selection.json` để phục vụ đánh giá tập test (TV4) và kiểm tra reload (TV6).# experiments — TV5
+## 4. Quy tắc và kết quả lựa chọn
 
-TODO: viết mục tiêu, cách làm, output thực tế, cách kiểm tra và nhận xét. Không điền kết quả dự kiến thành kết quả đã chạy.
+Trong mỗi run, chọn epoch có validation accuracy cao nhất;
+nếu hòa, chọn validation loss thấp hơn; nếu tiếp tục hòa,
+giữ epoch trước.
+
+Giữa các run, áp dụng cùng quy tắc accuracy/loss; nếu hòa cả hai,
+giữ run xuất hiện trước trong danh sách đầu vào.
+
+Kết quả trong `outputs/final/selection.json`:
+
+- Run được chọn: D.
+- Best epoch: 9.
+- Validation accuracy: 0.8883333333333333.
+- Validation loss: 0.3001373190085093.
+- Checkpoint nguồn: `outputs/runs/D/best_model.pth`.
+- Checkpoint dùng đánh giá cuối: `outputs/final/best_model.pth`.
+
+Không huấn luyện thêm sau bước chọn. Đánh giá test và kiểm chứng
+checkpoint được trình bày riêng trong phần TV4 và TV6.
