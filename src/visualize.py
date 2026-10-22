@@ -1,17 +1,115 @@
 """TV4 — chỉ tạo hình từ dữ liệu thực tế."""
 
 def plot_history(history_csv, output_path):
-    """Vẽ train_loss/val_loss theo epoch, nhãn trục và legend, lưu PNG rồi close.
-    Return str đường dẫn PNG.
-    """
-    raise NotImplementedError("TV4: triển khai plot_history")
+    """Vẽ train/validation loss từ history thật; trả đường dẫn PNG."""
+    import csv
+    import math
+    import matplotlib.pyplot as plt
+    from .utils import project_path
+
+    history_csv = project_path(history_csv)
+    output_path = project_path(output_path)
+
+    with history_csv.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        required = {"epoch", "train_loss", "val_loss"}
+
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError("History thiếu epoch/train_loss/val_loss")
+
+        rows = list(reader)
+
+    if not rows:
+        raise ValueError("History không có dữ liệu")
+
+    epochs = [int(row["epoch"]) for row in rows]
+    train_losses = [float(row["train_loss"]) for row in rows]
+    val_losses = [float(row["val_loss"]) for row in rows]
+
+    if epochs != list(range(1, len(epochs) + 1)):
+        raise ValueError("Epoch phải liên tiếp từ 1")
+
+    if any(
+        not math.isfinite(value) or value < 0
+        for value in train_losses + val_losses
+    ):
+        raise ValueError("Loss phải hữu hạn và không âm")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    try:
+        ax.plot(epochs, train_losses, label="Train loss")
+        ax.plot(epochs, val_losses, label="Validation loss")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel("Cross-entropy loss")
+        ax.set_title("Training and validation loss")
+        ax.legend()
+        ax.grid(alpha=0.3)
+        fig.tight_layout()
+        fig.savefig(output_path, format="png", dpi=150)
+    finally:
+        plt.close(fig)
+
+    return str(output_path.resolve())
 
 def plot_predictions(model, dataset, indices, class_names, device, output_path):
-    """Mỗi ảnh hiển thị Actual/Predicted; eval/no_grad; đúng cặp ảnh và nhãn.
-    Return str đường dẫn PNG. Nếu chỉ vẽ lỗi phải chọn từ lỗi thực tế.
-    """
-    raise NotImplementedError("TV4: triển khai plot_predictions")
-    """TV4 - Đánh giá mô hình FashionMNIST."""
+    """Vẽ tối đa 12 mẫu được chọn; trả đường dẫn PNG tuyệt đối."""
+    import torch
+    from .utils import project_path
+
+    indices = list(indices)
+
+    if not indices:
+        raise ValueError("Danh sách indices rỗng")
+    if any(type(i) is not int or not 0 <= i < len(dataset) for i in indices):
+        raise ValueError("Index phải là số nguyên trong phạm vi dataset")
+    if len(class_names) != 10:
+        raise ValueError("FashionMNIST cần 10 tên lớp")
+
+    # Giới hạn theo bố cục 3x4 của hàm vẽ hiện có.
+    selected = indices[:12]
+    images = []
+    true_labels = []
+
+    for index in selected:
+        image, label = dataset[index]
+        images.append(image)
+        true_labels.append(int(label))
+
+    images = torch.stack(images)
+
+    if tuple(images.shape[1:]) != (1, 28, 28):
+        raise ValueError("Ảnh phải có shape [B, 1, 28, 28]")
+    if images.dtype != torch.float32 or not torch.isfinite(images).all():
+        raise ValueError("Ảnh phải là float32 và hữu hạn")
+    if any(not 0 <= label < 10 for label in true_labels):
+        raise ValueError("Nhãn phải nằm trong 0–9")
+
+    model.eval()
+    with torch.no_grad():
+        logits = model(images.to(device))
+
+        if tuple(logits.shape) != (len(selected), 10):
+            raise ValueError("Model phải trả logits [B, 10]")
+        if not torch.isfinite(logits).all():
+            raise ValueError("Logits chứa NaN/Inf")
+
+        predicted_labels = logits.argmax(dim=1).cpu().tolist()
+
+    output_path = project_path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    plot_predictions_from_tensors(
+        images=images,
+        true_labels=true_labels,
+        predicted_labels=predicted_labels,
+        class_names=class_names,
+        output_path=output_path,
+        max_images=len(selected),
+    )
+
+    return str(output_path.resolve())
 
 import json
 from pathlib import Path
@@ -258,7 +356,7 @@ def plot_metrics(
 
     print(f"Đã lưu biểu đồ: {output_path}")
 
-def plot_predictions(
+def plot_predictions_from_tensors(
     images,
     true_labels,
     predicted_labels,
