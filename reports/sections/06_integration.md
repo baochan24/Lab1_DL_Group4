@@ -86,3 +86,19 @@ Sau khi clone, có thể lấy checkpoint cuối trực tiếp từ repository
 và đối chiếu SHA-256 với selection_provenance.json.
 Kiểm chứng từ checkout sạch được thực hiện ở bước bàn giao.
 
+## Kiểm chứng từ checkout sạch
+
+Đã tạo worktree detached tại commit 01f734b, chỉ sử dụng nội dung
+đã commit và môi trường Python hiện có.
+
+Kết quả:
+- Mode check PASS, không còn NotImplementedError.
+- 13/13 unittest PASS.
+- SHA-256 checkpoint cuối khớp selection_provenance.json.
+- Metadata checkpoint khớp selection.json: run D, epoch 9.
+- Model có 203.530 tham số, ở chế độ eval.
+- Forward trên tensor [2,1,28,28] trả logits hữu hạn [2,10].
+
+Không huấn luyện hoặc đánh giá test lại. Kiểm chứng này xác nhận
+bản đóng gói nạp và chạy được; chưa kiểm tra cài dependencies
+trong môi trường Python mới hoặc clone từ GitHub.

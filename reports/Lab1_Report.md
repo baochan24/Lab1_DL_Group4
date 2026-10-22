@@ -83,3 +83,8 @@ Chưa có phân tích định lượng lỗi theo từng lớp.
 
 Bước bàn giao còn cần kênh lưu checkpoint bền vững
 và kiểm chứng từ checkout sạch.
+
+Checkpoint cuối được đóng gói trong repository. Checkout sạch tại
+commit 01f734b đã qua kiểm tra cấu trúc, 13 unittest, đối chiếu
+SHA-256, metadata và forward. Việc cài đặt trong môi trường Python
+mới chưa được kiểm chứng.
