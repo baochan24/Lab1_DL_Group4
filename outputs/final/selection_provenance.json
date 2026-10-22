@@ -1,0 +1,11 @@
+{
+  "source_checkpoint": "D:\\learn_DeepLearning\\fashionmnist-lab1-final\\outputs\\runs\\D\\best_model.pth",
+  "final_checkpoint": "D:\\learn_DeepLearning\\fashionmnist-lab1-final\\outputs\\final\\best_model.pth",
+  "sha256": "f2cfc2dd397695916d4044bf7233e8143de206e88ded51990d260e0a62803a52",
+  "candidate_runs": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ]
+}

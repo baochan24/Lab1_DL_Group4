@@ -1,0 +1,28 @@
+{
+  "python": "3.13.7",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "packages": {
+    "torch": "2.14.1",
+    "torchvision": "0.29.1",
+    "numpy": "2.4.4",
+    "matplotlib": "3.10.9",
+    "pandas": "3.0.6"
+  },
+  "commit_sha": "457ebb813d3820901aae62099a6d1fdf18de580d",
+  "run_id": "B",
+  "seed": 42,
+  "device": "cpu",
+  "status": "completed",
+  "started_at": "2026-10-22T11:24:03.485355+00:00",
+  "training_status": "trained",
+  "training_started_at": "2026-10-22T11:24:03.507046+00:00",
+  "training_ended_at": "2026-10-22T11:25:46.533232+00:00",
+  "training_duration_seconds": 103.02619550004601,
+  "best_epoch": 10,
+  "best_val_loss": 0.4021453484694163,
+  "best_val_accuracy": 0.8596666666666667,
+  "training_error": null,
+  "duration_seconds": 103.06149359996198,
+  "finished_at": "2026-10-22T11:25:46.546847+00:00",
+  "plot_status": "completed"
+}

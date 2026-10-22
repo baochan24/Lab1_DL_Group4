@@ -10,3 +10,10 @@ data/*
 *.pth
 *.pt
 # CSV/JSON/PNG nhỏ có thể commit sau khi review; không ignore toàn bộ outputs.
+
+# Bỏ qua data/cache ở mọi cấp, kể cả notebook làm việc tại notebooks/.
+**/data/**
+!data/README.md
+.pytest_cache/
+# Giữ checkpoint cuối nhỏ để có thể chạy inference sau khi clone.
+!outputs/final/best_model.pth

@@ -1,0 +1,10 @@
+{
+  "run_id": "D",
+  "best_epoch": 9,
+  "checkpoint_path": "D:\\learn_DeepLearning\\fashionmnist-lab1-final\\outputs\\runs\\D\\best_model.pth",
+  "val_metrics": {
+    "loss": 0.3001373190085093,
+    "accuracy": 0.8883333333333333
+  },
+  "criterion": "highest best_val_accuracy, lowest best_val_loss"
+}

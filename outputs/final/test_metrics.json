@@ -1,0 +1,8 @@
+{
+  "loss": 0.32580671586990356,
+  "accuracy": 0.8811,
+  "num_samples": 10000,
+  "run_id": "D",
+  "epoch": 9,
+  "checkpoint_path": "D:\\learn_DeepLearning\\fashionmnist-lab1-final\\outputs\\final\\best_model.pth"
+}

@@ -18,7 +18,19 @@ def load_json(path):
 def save_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    import os
+    import tempfile
+    content = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                         prefix=".json-", suffix=".tmp", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 def validate_config(config):
     if not isinstance(config, dict):
@@ -68,6 +80,8 @@ def set_seed(seed):
 
 def resolve_device(name="auto"):
     import torch
+    if name not in ("auto", "cpu", "cuda"):
+        raise ValueError("Device phải là auto, cpu hoặc cuda")
     if name == "auto":
         name = "cuda" if torch.cuda.is_available() else "cpu"
     if name == "cuda" and not torch.cuda.is_available():
@@ -76,7 +90,7 @@ def resolve_device(name="auto"):
 
 def collect_environment():
     packages = {}
-    for name in ("torch", "torchvision", "numpy", "matplotlib"):
+    for name in ("torch", "torchvision", "numpy", "matplotlib", "pandas"):
         try:
             packages[name] = version(name)
         except PackageNotFoundError:
@@ -88,3 +102,53 @@ def collect_environment():
         commit = None
     return {"python": platform.python_version(), "platform": platform.platform(),
             "packages": packages, "commit_sha": commit}
+
+
+def validate_split(split, config):
+    """Kiểm tra file bàn giao TV1 trước khi train, không tự sửa data của TV1."""
+    if not isinstance(split, dict) or split.get("dataset_size") != 60000:
+        raise ValueError("Split phải có dataset_size=60000")
+    if split.get("seed") != config["seed"]:
+        raise ValueError("Seed split không khớp config")
+    seen = set()
+    for key, expected in (("train_indices", config["train_size"]), ("val_indices", config["val_size"])):
+        indices = split.get(key)
+        if not isinstance(indices, list) or len(indices) != expected:
+            raise ValueError(f"{key} không đủ số mẫu theo config")
+        if any(type(i) is not int or not 0 <= i < 60000 for i in indices):
+            raise ValueError(f"{key} chứa chỉ số sai miền/kiểu")
+        values = set(indices)
+        if len(values) != len(indices) or seen.intersection(values):
+            raise ValueError("Split có chỉ số lặp hoặc train/validation giao nhau")
+        seen.update(values)
+    if len(seen) != 60000:
+        raise ValueError("Split chưa phủ toàn bộ train gốc")
+    return split
+
+
+def diagnose_environment():
+    """Import và tính tensor thật; không chỉ kiểm package đã cài."""
+    import importlib
+    result = collect_environment()
+    checks = {}
+    modules = {}
+    for name in ("numpy", "matplotlib", "pandas", "torch", "torchvision"):
+        try:
+            modules[name] = importlib.import_module(name)
+            checks[name] = {"ok": True, "version": str(getattr(modules[name], "__version__", "unknown"))}
+        except Exception as exc:
+            checks[name] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    if "torch" in modules:
+        try:
+            torch = modules["torch"]
+            x = torch.ones(2, 3)
+            if float(x.sum()) != 6.0:
+                raise RuntimeError("Tensor check sai kết quả")
+            result["cuda_available"] = bool(torch.cuda.is_available())
+            result["gpu_name"] = torch.cuda.get_device_name(0) if result["cuda_available"] else None
+            checks["tensor_operation"] = {"ok": True}
+        except Exception as exc:
+            checks["tensor_operation"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+    result.update({"checks": checks, "ready": all(x["ok"] for x in checks.values()),
+                   "scope": "Environment only; no dataset or training verification"})
+    return result

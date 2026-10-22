@@ -1,0 +1,31 @@
+{
+  "run_id": "D",
+  "data_root": "data",
+  "split_indices_path": "outputs/split_indices.json",
+  "train_size": 54000,
+  "val_size": 6000,
+  "seed": 42,
+  "batch_size": 64,
+  "num_workers": 0,
+  "transform": "to_tensor",
+  "model_name": "mlp",
+  "hidden_units": 256,
+  "optimizer": "adam",
+  "learning_rate": 0.001,
+  "epochs": 10,
+  "device": "auto",
+  "output_root": "outputs",
+  "resolved_device": "cpu",
+  "class_names": [
+    "T-shirt/top",
+    "Trouser",
+    "Pullover",
+    "Dress",
+    "Coat",
+    "Sandal",
+    "Shirt",
+    "Sneaker",
+    "Bag",
+    "Ankle boot"
+  ]
+}

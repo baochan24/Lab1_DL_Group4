@@ -1,5 +1,22 @@
-# Kết quả
+# Kết quả thực nghiệm
 
-Chưa có thực nghiệm trong bộ khung. Khi chạy thật, tạo split_indices.json, data_summary.json, class_distribution.csv, sample_images.png; runs/<run_id>/ chứa config/metadata/history/checkpoint/hình; final/ chứa selection/test metrics/predictions/reload check.
+Các file ở đây là output của pipeline FashionMNIST đã chạy.
 
-Không tạo CSV số liệu hoặc checkpoint giả để lấp thư mục. Checkpoint bị .gitignore loại khỏi Git, cần lưu ở kênh nhóm thống nhất. CSV/JSON/PNG nhỏ có thể commit sau review.
+- experiment_results.csv: bảng so sánh A/B/C/D.
+- runs/A, B, C, D: config, metadata, history và loss curves.
+- final/best_model.pth: checkpoint D, epoch 9.
+- final/selection.json: lựa chọn bằng validation.
+- final/test_metrics.json: test accuracy 88,11% trên 10.000 ảnh.
+- final/test_predictions.csv: nhãn thật và dự đoán theo test_index.
+- final/predictions.png, misclassified.png: ảnh minh họa.
+- final/reload_check.json: kiểm chứng lưu–tải.
+- final/selection_provenance.json: nguồn checkpoint và SHA-256.
+- smoke_report.json: kiểm tra tích hợp một batch.
+
+Chỉ checkpoint cuối được đưa vào Git bằng ngoại lệ .gitignore.
+Checkpoint riêng của các run không được đóng gói.
+
+Đường dẫn tuyệt đối trong JSON/CSV là thông tin lịch sử của máy
+thực hiện. Không cần thư mục gốc đó để nạp checkpoint cuối.
+
+Không ghi đè artifact đã đóng gói khi chạy lại thí nghiệm.

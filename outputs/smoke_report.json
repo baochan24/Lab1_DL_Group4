@@ -1,0 +1,23 @@
+{
+  "purpose": "one-batch integration only; NOT validation/test performance",
+  "passed": true,
+  "batch_shape": [
+    64,
+    1,
+    28,
+    28
+  ],
+  "device": "cpu",
+  "weights_changed": true,
+  "evaluate_preserved_weights": true,
+  "reload": {
+    "logits_match": true,
+    "labels_match": true,
+    "rtol": 1e-05,
+    "atol": 1e-06,
+    "num_samples": 64,
+    "run_id": "smoke",
+    "epoch": 1,
+    "passed": true
+  }
+}
