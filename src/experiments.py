@@ -65,7 +65,6 @@ def summarize_and_select(run_dirs, output_root):
                     "val_loss": float(row["val_loss"]),
                     "val_accuracy": float(row["val_accuracy"])
                 })
-
         if not epochs_data:
             continue
 
@@ -136,8 +135,9 @@ def summarize_and_select(run_dirs, output_root):
     csv_headers = [
         "run_id", "hidden_units", "learning_rate", "batch_size", "epochs",
         "seed", "best_epoch", "best_val_accuracy", "best_val_loss",
-        "duration_seconds", "device", "commit_sha"
+        "duration_seconds", "device", "commit_sha", "checkpoint_path"
     ]
+
 
     with open(results_csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=csv_headers)
@@ -168,8 +168,6 @@ def summarize_and_select(run_dirs, output_root):
 
     selection_json_path = final_dir / "selection.json"
     save_json(selection_json_path, selection_data)
-
-
     # 4. Trả về dict kết quả
     return {
         "results_path": str(results_csv_path.resolve()),
