@@ -1,7 +1,8 @@
 import csv
 import json
 from pathlib import Path
-
+import math
+from .utils import project_path, validate_config, save_json
 def summarize_and_select(run_dirs, output_root):
     """
     Đọc config/history/metadata từng run; xuất experiment_results.csv.
@@ -11,14 +12,14 @@ def summarize_and_select(run_dirs, output_root):
     Không dùng test. Return dict {results_path, selection_path, checkpoint_path}.
     Không điền dữ liệu giả khi run thất bại/chưa có checkpoint.
     """
-    output_root_path = Path(output_root).resolve()
+    output_root_path = project_path(output_root).resolve()
     final_dir = output_root_path / "final"
     final_dir.mkdir(parents=True, exist_ok=True)
 
     summarized_runs = []
 
     for run_dir_input in run_dirs:
-        run_dir = Path(run_dir_input).resolve()
+        run_dir = project_path(run_dir_input).resolve()
         config_file = run_dir / "config.json"
         metadata_file = run_dir / "metadata.json"
         history_file = run_dir / "history.csv"
@@ -31,12 +32,26 @@ def summarize_and_select(run_dirs, output_root):
         # Đọc cấu hình
         with open(config_file, "r", encoding="utf-8") as f:
             config = json.load(f)
+            validate_config(config)
 
         # Đọc metadata nếu có
-        metadata = {}
-        if metadata_file.exists():
-            with open(metadata_file, "r", encoding="utf-8") as f:
-                metadata = json.load(f)
+                # Chỉ xét run đã train xong.
+        if not metadata_file.is_file():
+            continue
+
+        with metadata_file.open("r", encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        if not isinstance(metadata, dict):
+            raise ValueError(
+                f"Metadata không phải object: {metadata_file}"
+            )
+
+        if metadata.get("status") not in ("trained", "completed"):
+            continue
+
+        if metadata.get("training_status", "trained") != "trained":
+            continue
 
         # Đọc lịch sử huấn luyện
         epochs_data = []
@@ -54,11 +69,46 @@ def summarize_and_select(run_dirs, output_root):
         if not epochs_data:
             continue
 
-        # Chọn epoch tốt nhất trong run (val_accuracy cao nhất, hòa thì val_loss thấp nhất)
+        # Kiểm tra đủ epoch, đúng thứ tự và không trùng.
+        expected_epochs = list(range(1, config["epochs"] + 1))
+        actual_epochs = [row["epoch"] for row in epochs_data]
+
+        if actual_epochs != expected_epochs:
+            raise ValueError(
+                f"History thiếu/lặp/sai thứ tự epoch: {run_dir}"
+            )
+
+        # Kiểm tra metric hữu hạn và hợp lệ.
+        for row in epochs_data:
+            for key in (
+                "train_loss",
+                "train_accuracy",
+                "val_loss",
+                "val_accuracy",
+            ):
+                value = row[key]
+                if not math.isfinite(value) or value < 0:
+                    raise ValueError(
+                        f"Metric không hợp lệ: {run_dir}, "
+                        f"epoch={row['epoch']}, {key}={value}"
+                    )
+
+            if row["train_accuracy"] > 1 or row["val_accuracy"] > 1:
+                raise ValueError(
+                    f"Accuracy ngoài [0, 1]: {run_dir}"
+                )
+
+        # Chọn accuracy cao nhất, hòa thì loss thấp nhất.
+        # Nếu cả hai hòa, giữ epoch xuất hiện trước.
         best_epoch_data = max(
             epochs_data,
-            key=lambda x: (x["val_accuracy"], -x["val_loss"], -x["epoch"])
+            key=lambda x: (
+                x["val_accuracy"],
+                -x["val_loss"],
+                -x["epoch"],
+            ),
         )
+
 
         run_info = {
             "run_id": str(config.get("run_id", run_dir.name)),
@@ -117,8 +167,8 @@ def summarize_and_select(run_dirs, output_root):
     }
 
     selection_json_path = final_dir / "selection.json"
-    with open(selection_json_path, "w", encoding="utf-8") as f:
-        json.dump(selection_data, f, indent=2, ensure_ascii=False)
+    save_json(selection_json_path, selection_data)
+
 
     # 4. Trả về dict kết quả
     return {
