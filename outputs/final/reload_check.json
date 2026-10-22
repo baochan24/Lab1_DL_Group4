@@ -1,0 +1,11 @@
+{
+  "logits_match": true,
+  "labels_match": true,
+  "rtol": 1e-05,
+  "atol": 1e-06,
+  "num_samples": 64,
+  "run_id": "D",
+  "epoch": 9,
+  "checkpoint_path": "D:\\learn_DeepLearning\\fashionmnist-lab1-final\\outputs\\final\\best_model.pth",
+  "passed": true
+}

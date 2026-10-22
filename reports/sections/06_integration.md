@@ -78,6 +78,11 @@ trên batch đã dùng. Không suy rộng thành bảo đảm đồng nhất tuy
 Pipeline đã được chạy tại worktree tích hợp trên máy thực hiện.
 Chưa ghi nhận kiểm chứng từ clone sạch trong các bằng chứng hiện có.
 
-Checkpoint được giữ ngoài Git theo quy tắc *.pth/*.pt.
-Kênh lưu bền vững, hướng dẫn lấy checkpoint và kiểm chứng từ
-checkout sạch sẽ được hoàn tất trong bước đóng gói bàn giao.
+Checkpoint cuối `outputs/final/best_model.pth` được đưa vào Git
+bằng ngoại lệ trong .gitignore; kích thước 817.123 byte.
+Checkpoint riêng của các run vẫn bị bỏ qua theo quy tắc *.pth/*.pt.
+
+Sau khi clone, có thể lấy checkpoint cuối trực tiếp từ repository
+và đối chiếu SHA-256 với selection_provenance.json.
+Kiểm chứng từ checkout sạch được thực hiện ở bước bàn giao.
+

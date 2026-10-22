@@ -15,3 +15,5 @@ data/*
 **/data/**
 !data/README.md
 .pytest_cache/
+# Giữ checkpoint cuối nhỏ để có thể chạy inference sau khi clone.
+!outputs/final/best_model.pth

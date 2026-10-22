@@ -1,0 +1,5 @@
+run_id,hidden_units,learning_rate,batch_size,epochs,seed,best_epoch,best_val_accuracy,best_val_loss,duration_seconds,device,commit_sha,checkpoint_path
+A,128,0.001,64,10,42,10,0.8845,0.3197805469830831,111.4168402000214,cpu,457ebb813d3820901aae62099a6d1fdf18de580d,D:\learn_DeepLearning\fashionmnist-lab1-final\outputs\runs\A\best_model.pth
+B,128,0.0001,64,10,42,10,0.8596666666666667,0.4021453484694163,103.06149359996198,cpu,457ebb813d3820901aae62099a6d1fdf18de580d,D:\learn_DeepLearning\fashionmnist-lab1-final\outputs\runs\B\best_model.pth
+C,128,0.01,64,10,42,5,0.8716666666666667,0.3688928956985474,94.89046759996563,cpu,457ebb813d3820901aae62099a6d1fdf18de580d,D:\learn_DeepLearning\fashionmnist-lab1-final\outputs\runs\C\best_model.pth
+D,256,0.001,64,10,42,9,0.8883333333333333,0.3001373190085093,109.80618379998486,cpu,457ebb813d3820901aae62099a6d1fdf18de580d,D:\learn_DeepLearning\fashionmnist-lab1-final\outputs\runs\D\best_model.pth
