@@ -12,6 +12,7 @@ from torch import nn
 from torch.optim import Adam
 
 from src.evaluate import evaluate
+from src.utils import project_path
 
 
 def _now_iso():
@@ -75,7 +76,7 @@ def fit(model, train_loader, val_loader, config, run_dir):
     Best epoch: maximum validation accuracy; break ties by lower validation loss;
     if both values tie, keep the earlier epoch. Does not use the test loader.
     """
-    run_dir = Path(run_dir)
+    run_dir = project_path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
     history_path = run_dir / "history.csv"
     checkpoint_path = run_dir / "best_model.pth"
@@ -120,14 +121,14 @@ def fit(model, train_loader, val_loader, config, run_dir):
     start_clock = time.perf_counter()
     metadata = _read_metadata(metadata_path)
     metadata.update({
-        "status": "running",
+        "training_status": "running",
         "training_started_at": started_at,
         "training_ended_at": None,
         "training_duration_seconds": None,
         "best_epoch": None,
         "best_val_loss": None,
         "best_val_accuracy": None,
-        "error": None,
+        "training_error": None,
     })
     _write_metadata(metadata_path, metadata)
 
@@ -214,14 +215,14 @@ def fit(model, train_loader, val_loader, config, run_dir):
         duration = float(time.perf_counter() - start_clock)
         metadata = _read_metadata(metadata_path)
         metadata.update({
-            "status": "completed",
+            "training_status": "trained",
             "training_started_at": started_at,
             "training_ended_at": ended_at,
             "training_duration_seconds": duration,
             "best_epoch": int(best_epoch),
             "best_val_loss": float(best_loss),
             "best_val_accuracy": float(best_accuracy),
-            "error": None,
+            "training_error": None,
         })
         _write_metadata(metadata_path, metadata)
 
@@ -236,11 +237,11 @@ def fit(model, train_loader, val_loader, config, run_dir):
         duration = float(time.perf_counter() - start_clock)
         metadata = _read_metadata(metadata_path)
         metadata.update({
-            "status": "failed",
+            "training_status": "failed",
             "training_started_at": started_at,
             "training_ended_at": ended_at,
             "training_duration_seconds": duration,
-            "error": f"{type(exc).__name__}: {exc}",
+            "training_error": f"{type(exc).__name__}: {exc}",
         })
         _write_metadata(metadata_path, metadata)
         raise
