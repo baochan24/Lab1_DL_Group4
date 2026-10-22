@@ -1,11 +1,128 @@
-"""TV5 — dùng kết quả train chung, không triển khai training loop thứ hai."""
+import csv
+import json
+from pathlib import Path
 
 def summarize_and_select(run_dirs, output_root):
-    """Đọc config/history/metadata từng run; xuất experiment_results.csv.
+    """
+    Đọc config/history/metadata từng run; xuất experiment_results.csv.
     Chọn run bằng best_val_accuracy, hòa bằng best_val_loss; nếu vẫn hòa giữ
     run xuất hiện trước trong run_dirs. Ghi final/selection.json (run_id,
     best_epoch, checkpoint_path, val_metrics, criterion).
     Không dùng test. Return dict {results_path, selection_path, checkpoint_path}.
     Không điền dữ liệu giả khi run thất bại/chưa có checkpoint.
     """
-    raise NotImplementedError("TV5: triển khai tổng hợp và chọn run")
+    output_root_path = Path(output_root).resolve()
+    final_dir = output_root_path / "final"
+    final_dir.mkdir(parents=True, exist_ok=True)
+
+    summarized_runs = []
+
+    for run_dir_input in run_dirs:
+        run_dir = Path(run_dir_input).resolve()
+        config_file = run_dir / "config.json"
+        metadata_file = run_dir / "metadata.json"
+        history_file = run_dir / "history.csv"
+        checkpoint_file = run_dir / "best_model.pth"
+
+        # Bỏ qua run chưa chạy xong, thất bại hoặc thiếu checkpoint/history (không điền dữ liệu giả)
+        if not (history_file.exists() and config_file.exists() and checkpoint_file.exists()):
+            continue
+
+        # Đọc cấu hình
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+        # Đọc metadata nếu có
+        metadata = {}
+        if metadata_file.exists():
+            with open(metadata_file, "r", encoding="utf-8") as f:
+                metadata = json.load(f)
+
+        # Đọc lịch sử huấn luyện
+        epochs_data = []
+        with open(history_file, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                epochs_data.append({
+                    "epoch": int(row["epoch"]),
+                    "train_loss": float(row["train_loss"]),
+                    "train_accuracy": float(row["train_accuracy"]),
+                    "val_loss": float(row["val_loss"]),
+                    "val_accuracy": float(row["val_accuracy"])
+                })
+
+        if not epochs_data:
+            continue
+
+        # Chọn epoch tốt nhất trong run (val_accuracy cao nhất, hòa thì val_loss thấp nhất)
+        best_epoch_data = max(
+            epochs_data,
+            key=lambda x: (x["val_accuracy"], -x["val_loss"], -x["epoch"])
+        )
+
+        run_info = {
+            "run_id": str(config.get("run_id", run_dir.name)),
+            "hidden_units": int(config.get("hidden_units", 128)),
+            "learning_rate": float(config.get("learning_rate", 0.001)),
+            "batch_size": int(config.get("batch_size", 64)),
+            "epochs": int(config.get("epochs", 10)),
+            "seed": int(config.get("seed", 42)),
+            "best_epoch": int(best_epoch_data["epoch"]),
+            "best_val_accuracy": float(best_epoch_data["val_accuracy"]),
+            "best_val_loss": float(best_epoch_data["val_loss"]),
+            "duration_seconds": metadata.get("duration_seconds", "N/A"),
+            "device": str(metadata.get("device", config.get("device", "auto"))),
+            "commit_sha": str(metadata.get("commit_sha", "N/A")),
+            "checkpoint_path": str(checkpoint_file.resolve())
+        }
+        summarized_runs.append(run_info)
+
+    # Nếu không có run nào thành công thì báo lỗi, không điền dữ liệu giả
+    if not summarized_runs:
+        raise FileNotFoundError("Không tìm thấy run hợp lệ nào có đủ config.json, history.csv và best_model.pth.")
+
+    # 1. Xuất file experiment_results.csv
+    results_csv_path = output_root_path / "experiment_results.csv"
+    csv_headers = [
+        "run_id", "hidden_units", "learning_rate", "batch_size", "epochs",
+        "seed", "best_epoch", "best_val_accuracy", "best_val_loss",
+        "duration_seconds", "device", "commit_sha"
+    ]
+
+    with open(results_csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=csv_headers)
+        writer.writeheader()
+        for run in summarized_runs:
+            writer.writerow({k: run[k] for k in csv_headers})
+
+    # 2. Chọn run tốt nhất:
+    # - best_val_accuracy cao nhất
+    # - hòa thì best_val_loss thấp nhất
+    # - hòa tiếp giữ run xuất hiện trước trong run_dirs (dùng -item[0] làm tie-breaker)
+    best_run = max(
+        enumerate(summarized_runs),
+        key=lambda item: (item[1]["best_val_accuracy"], -item[1]["best_val_loss"], -item[0])
+    )[1]
+
+    # 3. Ghi file final/selection.json đúng cấu trúc yêu cầu
+    selection_data = {
+        "run_id": best_run["run_id"],
+        "best_epoch": best_run["best_epoch"],
+        "checkpoint_path": best_run["checkpoint_path"],
+        "val_metrics": {
+            "loss": best_run["best_val_loss"],
+            "accuracy": best_run["best_val_accuracy"]
+        },
+        "criterion": "highest best_val_accuracy, lowest best_val_loss"
+    }
+
+    selection_json_path = final_dir / "selection.json"
+    with open(selection_json_path, "w", encoding="utf-8") as f:
+        json.dump(selection_data, f, indent=2, ensure_ascii=False)
+
+    # 4. Trả về dict kết quả
+    return {
+        "results_path": str(results_csv_path.resolve()),
+        "selection_path": str(selection_json_path.resolve()),
+        "checkpoint_path": str(Path(best_run["checkpoint_path"]).resolve())
+    }
